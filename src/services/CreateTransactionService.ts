@@ -1,6 +1,7 @@
-// import AppError from '../errors/AppError';
-import { getRepository } from 'typeorm';
+import { getCustomRepository, getRepository } from 'typeorm';
+import AppError from '../errors/AppError';
 import Transaction from '../models/Transaction';
+import TransactionRepository from '../repositories/TransactionsRepository';
 import Category from '../models/Category';
 
 interface Request {
@@ -17,8 +18,15 @@ class CreateTransactionService {
     type,
     category,
   }: Request): Promise<Transaction> {
-    const transactionRepository = getRepository(Transaction);
+    const transactionRepository = getCustomRepository(TransactionRepository);
     const categoryRepository = getRepository(Category);
+
+    if (
+      type === 'outcome' &&
+      value > (await (await transactionRepository.getBalance()).total)
+    ) {
+      throw new AppError('Outcome not permitted');
+    }
 
     let categoryEntity = await categoryRepository.findOne({
       title: category,
